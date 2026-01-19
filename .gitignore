@@ -1,0 +1,133 @@
+# =============================================================================
+# Elixir SDK .gitignore
+# =============================================================================
+
+### Elixir ###
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+*.beam
+/config/*.secret.exs
+.elixir_ls/
+
+# Dialyzer
+/priv/plts/
+
+# ExDoc
+/docs/
+
+# ExUnit
+/.elixir_ls/
+
+# Mix archives
+/archives/
+
+# Test artifacts
+/test/fixtures/tmp/
+
+### Elixir Release ###
+/rel/artifacts/
+/rel/builds/
+
+# =============================================================================
+# OS Specific
+# =============================================================================
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+*.icloud
+
+### Linux ###
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# =============================================================================
+# IDE / Editor
+# =============================================================================
+
+### VS Code ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+*.vsix
+
+### Vim ###
+[._]*.s[a-v][a-z]
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+tags
+[._]*.un~
+
+### JetBrains ###
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.idea_modules/
+
+# =============================================================================
+# Project Specific
+# =============================================================================
+
+# Test outputs
+*.log
+
+# Coverage
+/cover/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+/tmp/
