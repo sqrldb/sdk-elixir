@@ -2,12 +2,25 @@ defmodule SquirrelDB do
   @moduledoc """
   Elixir client for SquirrelDB.
 
+  ## Modules
+
+  - `SquirrelDB` - WebSocket client for realtime database operations
+  - `SquirrelDB.Query` - Query builder with MongoDB-like syntax
+  - `SquirrelDB.Storage` - S3-compatible object storage client
+  - `SquirrelDB.Cache` - Redis-compatible cache client (RESP protocol)
+
   ## Example
 
       {:ok, client} = SquirrelDB.connect("localhost:8080")
       {:ok, docs} = SquirrelDB.query(client, ~s|db.table("users").run()|)
       {:ok, doc} = SquirrelDB.insert(client, "users", %{name: "Alice", age: 30})
       :ok = SquirrelDB.close(client)
+
+  ## Cache Example
+
+      {:ok, cache} = SquirrelDB.Cache.connect("localhost", 6379)
+      :ok = SquirrelDB.Cache.set(cache, "key", "value", ttl: 60)
+      {:ok, "value"} = SquirrelDB.Cache.get(cache, "key")
   """
 
   use GenServer
@@ -61,8 +74,42 @@ defmodule SquirrelDB do
     GenServer.call(client, {:query, q}, :infinity)
   end
 
+  @doc """
+  Subscribe to changes on a table (fluent API).
+
+  ## Examples
+
+      SquirrelDB.subscribe(client, "users")
+      |> SquirrelDB.changes(fn change -> ... end)
+
+      SquirrelDB.subscribe(client, "users")
+      |> SquirrelDB.find(age: {:gt, 21})
+      |> SquirrelDB.changes(fn change -> ... end)
+  """
+  def subscribe(client, table_name) when is_binary(table_name) do
+    %{client: client, table: table_name, filter: nil}
+  end
+
+  @doc "Add a filter to the subscription"
+  def find(%{client: _, table: _, filter: _} = builder, conditions) do
+    %{builder | filter: conditions}
+  end
+
   @doc "Subscribe to changes"
-  def subscribe(client, q, callback) when is_function(callback, 1) do
+  def changes(%{client: client, table: table, filter: filter}, callback) when is_function(callback, 1) do
+    query = %{"table" => table, "changes" => %{"includeInitial" => false}}
+    query =
+      if filter do
+        filter_structured = SquirrelDB.Query.table(table) |> SquirrelDB.Query.find(filter) |> SquirrelDB.Query.compile_structured() |> Map.get("filter")
+        if filter_structured, do: Map.put(query, "filter", filter_structured), else: query
+      else
+        query
+      end
+    GenServer.call(client, {:subscribe, query, callback}, :infinity)
+  end
+
+  @doc "Subscribe to changes with raw query string (legacy)"
+  def subscribe_raw(client, q, callback) when is_function(callback, 1) do
     GenServer.call(client, {:subscribe, q, callback}, :infinity)
   end
 

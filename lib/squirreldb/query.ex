@@ -16,6 +16,7 @@ defmodule SquirrelDB.Query do
 
   defstruct table_name: nil,
             filter_expr: nil,
+            filter_conditions: nil,
             sort_specs: [],
             limit_value: nil,
             skip_value: nil,
@@ -24,6 +25,7 @@ defmodule SquirrelDB.Query do
   @type t :: %__MODULE__{
           table_name: String.t(),
           filter_expr: String.t() | nil,
+          filter_conditions: keyword() | map() | nil,
           sort_specs: list({String.t(), :asc | :desc}),
           limit_value: non_neg_integer() | nil,
           skip_value: non_neg_integer() | nil,
@@ -59,7 +61,7 @@ defmodule SquirrelDB.Query do
   """
   @spec find(t(), keyword() | map()) :: t()
   def find(query, conditions) do
-    %{query | filter_expr: compile_filter(conditions)}
+    %{query | filter_expr: compile_filter(conditions), filter_conditions: conditions}
   end
 
   @doc "Sort by field"
@@ -80,7 +82,7 @@ defmodule SquirrelDB.Query do
   @spec changes(t()) :: t()
   def changes(query), do: %{query | is_changes: true}
 
-  @doc "Compile to SquirrelDB JS query string"
+  @doc "Compile to SquirrelDB JS query string (legacy)"
   @spec compile(t()) :: String.t()
   def compile(%__MODULE__{} = q) do
     query = ~s{db.table("#{q.table_name}")}
@@ -120,6 +122,71 @@ defmodule SquirrelDB.Query do
       query <> ".run()"
     end
   end
+
+  @doc "Compile to structured query map (preferred, no JS evaluation on server)"
+  @spec compile_structured(t()) :: map()
+  def compile_structured(%__MODULE__{} = q) do
+    query = %{"table" => q.table_name}
+
+    query =
+      if q.filter_conditions do
+        Map.put(query, "filter", filter_to_structured(q.filter_conditions))
+      else
+        query
+      end
+
+    query =
+      if q.sort_specs != [] do
+        sort = Enum.map(q.sort_specs, fn {field, direction} ->
+          %{"field" => field, "direction" => to_string(direction)}
+        end)
+        Map.put(query, "sort", sort)
+      else
+        query
+      end
+
+    query = if q.limit_value, do: Map.put(query, "limit", q.limit_value), else: query
+    query = if q.skip_value, do: Map.put(query, "skip", q.skip_value), else: query
+
+    if q.is_changes do
+      Map.put(query, "changes", %{"includeInitial" => false})
+    else
+      query
+    end
+  end
+
+  # Convert filter conditions to structured format
+  defp filter_to_structured(conditions) when is_list(conditions) or is_map(conditions) do
+    conditions
+    |> Enum.map(&condition_to_structured/1)
+    |> Enum.into(%{})
+  end
+
+  defp condition_to_structured({:and, conditions}) do
+    {"$and", Enum.map(conditions, &filter_to_structured([&1]))}
+  end
+
+  defp condition_to_structured({:or, conditions}) do
+    {"$or", Enum.map(conditions, &filter_to_structured([&1]))}
+  end
+
+  defp condition_to_structured({:not, condition}) do
+    {"$not", filter_to_structured([condition])}
+  end
+
+  defp condition_to_structured({field, {:eq, value}}), do: {to_string(field), %{"$eq" => value}}
+  defp condition_to_structured({field, {:ne, value}}), do: {to_string(field), %{"$ne" => value}}
+  defp condition_to_structured({field, {:gt, value}}), do: {to_string(field), %{"$gt" => value}}
+  defp condition_to_structured({field, {:gte, value}}), do: {to_string(field), %{"$gte" => value}}
+  defp condition_to_structured({field, {:lt, value}}), do: {to_string(field), %{"$lt" => value}}
+  defp condition_to_structured({field, {:lte, value}}), do: {to_string(field), %{"$lte" => value}}
+  defp condition_to_structured({field, {:in, values}}), do: {to_string(field), %{"$in" => values}}
+  defp condition_to_structured({field, {:not_in, values}}), do: {to_string(field), %{"$nin" => values}}
+  defp condition_to_structured({field, {:contains, value}}), do: {to_string(field), %{"$contains" => value}}
+  defp condition_to_structured({field, {:starts_with, value}}), do: {to_string(field), %{"$startsWith" => value}}
+  defp condition_to_structured({field, {:ends_with, value}}), do: {to_string(field), %{"$endsWith" => value}}
+  defp condition_to_structured({field, {:exists, value}}), do: {to_string(field), %{"$exists" => value}}
+  defp condition_to_structured({field, value}), do: {to_string(field), %{"$eq" => value}}
 
   # Compile filter conditions to JS
   defp compile_filter(conditions) when is_list(conditions) or is_map(conditions) do
