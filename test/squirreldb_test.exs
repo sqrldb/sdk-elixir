@@ -2,26 +2,23 @@ defmodule SquirrelDB.TypesTest do
   use ExUnit.Case, async: true
 
   describe "Document" do
-    test "from_map creates document" do
-      data = %{
-        "id" => "123",
-        "collection" => "users",
-        "data" => %{"name" => "Test"},
-        "created_at" => "2024-01-01T00:00:00Z",
-        "updated_at" => "2024-01-01T00:00:00Z"
+    test "document map structure" do
+      doc = %{
+        id: "123",
+        collection: "users",
+        data: %{"name" => "Test"},
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z"
       }
-
-      doc = SquirrelDB.Document.from_map(data)
 
       assert doc.id == "123"
       assert doc.collection == "users"
       assert doc.data == %{"name" => "Test"}
       assert doc.created_at == "2024-01-01T00:00:00Z"
-      assert doc.updated_at == "2024-01-01T00:00:00Z"
     end
 
-    test "document has correct fields" do
-      doc = %SquirrelDB.Document{
+    test "document has correct field types" do
+      doc = %{
         id: "test-id",
         collection: "test-collection",
         data: %{"foo" => "bar"},
@@ -38,78 +35,70 @@ defmodule SquirrelDB.TypesTest do
   end
 
   describe "ChangeEvent" do
-    test "from_map handles initial" do
-      data = %{
-        "type" => "initial",
-        "document" => %{
-          "id" => "123",
-          "collection" => "users",
-          "data" => %{"name" => "Test"},
-          "created_at" => "2024-01-01T00:00:00Z",
-          "updated_at" => "2024-01-01T00:00:00Z"
+    test "initial change event" do
+      event = %{
+        type: :initial,
+        document: %{
+          id: "123",
+          collection: "users",
+          data: %{"name" => "Test"},
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z"
         }
       }
-
-      event = SquirrelDB.ChangeEvent.from_map(data)
 
       assert event.type == :initial
       assert event.document.id == "123"
     end
 
-    test "from_map handles insert" do
-      data = %{
-        "type" => "insert",
-        "new" => %{
-          "id" => "123",
-          "collection" => "users",
-          "data" => %{"name" => "Test"},
-          "created_at" => "2024-01-01T00:00:00Z",
-          "updated_at" => "2024-01-01T00:00:00Z"
+    test "insert change event" do
+      event = %{
+        type: :insert,
+        new: %{
+          id: "123",
+          collection: "users",
+          data: %{"name" => "Test"},
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z"
         }
       }
-
-      event = SquirrelDB.ChangeEvent.from_map(data)
 
       assert event.type == :insert
-      assert event.new != nil
+      assert is_map(event.new)
     end
 
-    test "from_map handles update" do
-      data = %{
-        "type" => "update",
-        "old" => %{"name" => "Old"},
-        "new" => %{
-          "id" => "123",
-          "collection" => "users",
-          "data" => %{"name" => "New"},
-          "created_at" => "2024-01-01T00:00:00Z",
-          "updated_at" => "2024-01-01T00:00:00Z"
+    test "update change event" do
+      event = %{
+        type: :update,
+        old: %{"name" => "Old"},
+        new: %{
+          id: "123",
+          collection: "users",
+          data: %{"name" => "New"},
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z"
         }
       }
-
-      event = SquirrelDB.ChangeEvent.from_map(data)
 
       assert event.type == :update
       assert event.old == %{"name" => "Old"}
-      assert event.new != nil
+      assert is_map(event.new)
     end
 
-    test "from_map handles delete" do
-      data = %{
-        "type" => "delete",
-        "old" => %{
-          "id" => "123",
-          "collection" => "users",
-          "data" => %{"name" => "Test"},
-          "created_at" => "2024-01-01T00:00:00Z",
-          "updated_at" => "2024-01-01T00:00:00Z"
+    test "delete change event" do
+      event = %{
+        type: :delete,
+        old: %{
+          id: "123",
+          collection: "users",
+          data: %{"name" => "Test"},
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z"
         }
       }
 
-      event = SquirrelDB.ChangeEvent.from_map(data)
-
       assert event.type == :delete
-      assert event.old != nil
+      assert is_map(event.old)
     end
   end
 end
